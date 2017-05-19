@@ -2,7 +2,7 @@
 #
 # GetChefShell
 #
-# Expected to be run from inside vagrant vm after a chef exec kitchen converge. typicall used to debug chef recipe
+# Expected to be run from inside vagrant vm after a chef exec kitchen converge. typically used to debug chef recipe
 # often helpful to scp to vagrant@localhost;~/bin; then echo "export PATH=$PATH:~/bin" > ~/.bashrc
 # 
 # Example: can be added to Vagrantfile
