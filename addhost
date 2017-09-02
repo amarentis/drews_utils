@@ -1,0 +1,31 @@
+#!/bin/bash                                                                                                                                                                              
+
+# Author: Andrew Marentis <amarentis@gmail.com>
+# 
+# Purpose: Setup sshkey login (Passwordless login) and Add host to ~/.ssh/config
+                                                                                                          
+sshpub=id_rsa.pub
+sshkey=id_rsa
+
+function Addhost {
+    if [ "${HOME}/.ssh/${sshpub}" ]; then
+        #echo "$1:$2:$3"                                                                                                                      
+        cat ~/.ssh/${sshpub} | ssh ${1}@${2} -p 22 "(mkdir .ssh&>/dev/null; chmod 700 ~/.ssh && touch ~/.ssh/authorized_keys && chmod +w ~/.ssh/authorized_keys && cat - >> ~/.ssh/authorized_keys )&&chmod 600 ~/.ssh/authorized_keys"
+    else
+        echo "ssh public not avalible please generate sshkey"
+    fi
+    echo "" >> ~/.ssh/config && echo "Host ${2}" >> ~/.ssh/config && echo "User ${1}" >> ~/.ssh/config && echo "IdentityFile ~/.ssh/${sshkey}" >> ~/.ssh/config
+
+}
+
+case "$1" in
+      add)
+        Addhost $2 $3
+        ;;
+
+      *)
+       echo $"Usage: $0 {add Username hostname}"
+       exit 1
+       ;;
+esac
+
