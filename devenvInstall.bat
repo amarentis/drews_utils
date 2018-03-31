@@ -13,7 +13,7 @@ echo "Done!"
 
 @REM Install Dev Tools
 CALL :banner "Installing Dev Tools....."
-choco install git virtualbox virtualbox.extensionpack vagrant docker filezilla chefdk putty gradle wget notepadplusplus fiddler4 choco install sublimetext3 -y
+choco install git virtualbox virtualbox.extensionpack vagrant docker filezilla chefdk putty gradle wget notepadplusplus fiddler4 choco sublimetext3 -y
 echo "Done!"
 
 @REM Install Vagrant Plugins
