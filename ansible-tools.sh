@@ -1,18 +1,10 @@
-#!/usr/bin/env bash
-#
-# Author: Andrew Marentis <amarentis@gmail.com> 
-# 
-# 1. create a directory
-# 2. git init
-# 3. $0 create mynewplaybook
-# 4. vagrant up
-# 5. start adding more tasks in roles/mynewplaybook/tasks/main.yml
-# 6. vagrant provision to run those changes
+#!/bin/bash
 
 command=$1
 playbookname=$2
+#scriptdir="`dirname \"$0\"`"
 scriptdir=$(pwd)
-
+echo $scriptdir
 if [ $# -ne 2 ];then
      echo "Usage: $0 <commmand> <playbookname>"
      exit 1
@@ -20,21 +12,14 @@ fi
 
 
 create_blank_playbook () {
-# Create default ansible directory sctructure
+
 mkdir -p ${scriptdir}/roles;
-pbdirlist="defaults meta tasks templates tests vars handlers";
-for i in $pbdirlist; do
-    mkdir -p ${scriptdir}/roles/${playbookname}/${i};
-    if [ "$i" == "templates" ];then
-        echo "# Ansible Template" >> ${scriptdir}/roles/${playbookname}/${i}/${playbookname}.j2;
-    else
-        echo "---" >>${scriptdir}/roles/${playbookname}/${i}/main.yml;
-    fi
-done
+cd ${scriptdir}/roles;
+ansible-galaxy init ${playbookname}
+echo "# Ansible Template" >> ${scriptdir}/roles/${playbookname}/templates/${playbookname}.j2;
 
 mkdir -p ${scriptdir}/inventories
-
-# create default host entry for vagrant vm in the 
+# create default entry fro vagrant vm
 echo 'default ansible_ssh_host=127.0.0.1 ansible_ssh_port=2222 ansible_user=vagrant ansible_host=127.0.0.1' >${scriptdir}/inventories/local_dev
 
 mkdir -p ${scriptdir}/module_utiles
@@ -120,7 +105,7 @@ end
 
 EOF
 
-cat <<EOF >> site.yml
+cat <<EOF >> ${scriptdir}/site.yml
 - hosts: all
   remote_user: root
   #become: yes
@@ -134,6 +119,8 @@ cat <<EOF >> site.yml
      - ${playbookname}
 EOF
 
+
+
 }
 
 
@@ -145,3 +132,4 @@ case $command in
          echo "Usage: $0 <commmand> <playbookname>"
          ;;
 esac
+
