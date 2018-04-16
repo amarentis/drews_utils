@@ -145,4 +145,3 @@ case $command in
          echo "Usage: $0 <commmand> <playbookname>"
          ;;
 esac
-
