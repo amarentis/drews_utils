@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 command=$1
 playbookname=$2
@@ -37,9 +37,17 @@ Vagrant.configure(2) do |config|
   # For a complete reference, please see the online documentation at
   # https://docs.vagrantup.com.
 
+  # Requires vagrant-hostmanager plugin 
+  # to install: vagrant plugin install vagrant-hostmanager
+  config.hostmanager.enabled = true
+  config.hostmanager.manage_guest = true
+
   # Every Vagrant development environment requires a box. You can search for
   # boxes at https://atlas.hashicorp.com/search.
-  config.vm.box = "bento/ubuntu-14.04"
+  config.vm.provider "virtualbox"
+  config.vm.box = "bento/ubuntu-16.04"
+
+  config.vm.hostname = "default"
 
   # Disable automatic box update checking. If you disable this, then
   # boxes will only be checked for updates when the user runs
@@ -99,7 +107,8 @@ Vagrant.configure(2) do |config|
   config.vm.provision "ansible" do |ansible|
     ansible.verbose = "v"
     ansible.playbook = "site.yml"
-    ansible.inventory_path = "inventories/local_dev"
+    #ansible.inventory_path = "inventories/local_dev"
+    ansible.limit = "default"
   end
 end
 
@@ -107,14 +116,13 @@ EOF
 
 cat <<EOF >> ${scriptdir}/site.yml
 - hosts: all
-  remote_user: root
-  #become: yes
-  #become_method: sudo
+  #remote_user: root
+  become: yes
+  become_method: sudo
   pre_tasks:
       - name: 'install python2'
         raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
         when: "ansible_distribution == 'Ubuntu'"
-
   roles:
      - ${playbookname}
 EOF
