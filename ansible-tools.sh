@@ -20,9 +20,9 @@ echo "# Ansible Template" >> ${scriptdir}/roles/${playbookname}/templates/${play
 
 mkdir -p ${scriptdir}/inventories
 # create default entry fro vagrant vm
-echo 'default ansible_ssh_host=127.0.0.1 ansible_ssh_port=2222 ansible_user=vagrant ansible_host=127.0.0.1' >${scriptdir}/inventories/local_dev
+echo 'default ansible_ssh_host=127.0.0.1 ansible_ssh_port=2222 ansible_user=vagrant ansible_host=127.0.0.1' >${scriptdir}/inventories/local_dev;
 
-mkdir -p ${scriptdir}/module_utiles
+mkdir -p ${scriptdir}/module_utiles;
 
 cat <<EOF >> ${scriptdir}/Vagrantfile
 # -*- mode: ruby -*-
@@ -137,23 +137,23 @@ cat <<EOF >> ${scriptdir}/README.md
 * Vagrant
 
 # Getting started 
-```
-1.) Run:
+
+1. Run:
 
 vagrant up
 
-2.) Edit file:
+2. Edit file:
     roles/${playbookname}/tasks/main.yml
 
-3.) Save changes
+3. Save changes
 
-4.) check changes run: 
+4. check changes run: 
 
 vagrant provision
 
-5.) Repeat
+5. Repeat
 
-```
+
 EOF
 
 }
