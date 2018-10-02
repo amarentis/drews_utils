@@ -26,7 +26,7 @@ playbookname=devopssetup
 # Functions
 function ansible_install {
 	sudo apt-get update
-	sudo apt-add-repository ppa:ansible/ansible
+	sudo apt-add-repository ppa:ansible/ansible -y
 	sudo apt-get update
 	sudo apt-get install ansible -y
 }
@@ -39,7 +39,7 @@ cat <<EOF >${scriptdir}/${playbookname}.yml
   tasks:
   - name: Update APT package cache
     apt:
-     update_cache: yes
+     update_cache: no
     when: "ansible_distribution == 'Ubuntu'"
 
   - name: Adding Docker key 
@@ -51,7 +51,7 @@ cat <<EOF >${scriptdir}/${playbookname}.yml
   - name: Adding Docker Repo
     apt_repository:
       repo: deb http://get.docker.io/ubuntu docker main
-      state: present
+      state: absent
     when: "ansible_distribution == 'Ubuntu'"  
 
   - name: Adding google chrome key
@@ -66,13 +66,30 @@ cat <<EOF >${scriptdir}/${playbookname}.yml
       state: present
     when: "ansible_distribution == 'Ubuntu'"  
 
-  - name: Install software-properties-common lxd lxd-client lxc-docker git google-chrome-stable libcurl3 maven python-pip firefox etc. 
+  - name: Ubuntu16 Install software-properties-common lxd lxd-client lxc-docker git google-chrome-stable libcurl3 maven python-pip firefox etc. 
     apt: name={{item}} state=present
     with_items:
          - software-properties-common
          - lxd
          - lxd-client
-         - lxc-docker
+         #- lxc-docker
+         - git
+         - libcurl3
+         - maven
+         - python-pip
+         - firefox
+         - google-chrome-stable
+         - nmap
+         - emacs24-nox
+    when: (ansible_distribution == "Ubuntu" and ansible_distribution_version == "16.04") 
+
+  - name: Ubuntu18 Install software-properties-common lxd lxd-client lxc-docker git google-chrome-stable libcurl3 maven python-pip firefox etc. 
+    apt: name={{item}} state=present
+    with_items:
+         - software-properties-common
+         - lxd
+         - lxd-client
+         - emacs25-nox
          - git
          - libcurl3
          - maven
@@ -80,7 +97,7 @@ cat <<EOF >${scriptdir}/${playbookname}.yml
          - firefox
          - google-chrome-stable
          - nmap     
-    when: "ansible_distribution == 'Ubuntu'"
+    when: (ansible_distribution == "Ubuntu" and ansible_distribution_version == "18.04")
 
   - name: Install vagrant
     apt:
@@ -188,6 +205,28 @@ cat <<EOF >${scriptdir}/${playbookname}.yml
         dest: "{{ansible_env.HOME}}/bin"
         remote_src: yes
     when: "ansible_distribution == 'Ubuntu'"
+
+  - name: Download Sublime-Text
+    unarchive:
+        src: "https://download.sublimetext.com/sublime_text_3_build_3176_x64.tar.bz2"
+        dest: "{{ansible_env.HOME}}/bin"
+        remote_src: yes
+    when: "ansible_distribution == 'Ubuntu'"
+
+  - name: Link Sublime Test bin in bin
+    file:
+        src: "{{ansible_env.HOME}}/bin/sublime_text_3/sublime_text"
+        path: "{{ansible_env.HOME}}/bin/sublime_text"
+        state: link
+    when: "ansible_distribution == 'Ubuntu'"
+
+  - name: Add sublime text desktop icon
+    file:
+        src: "{{ansible_env.HOME}}/bin/sublime_text_3/sublime_text.desktop"
+        path: "/usr/share/applications/sublime_text.desktop"
+        state: link
+    when: "ansible_distribution == 'Ubuntu'"
+
 EOF
 
 #  Run ansible
