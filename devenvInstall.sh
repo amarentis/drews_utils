@@ -227,6 +227,23 @@ cat <<EOF >${scriptdir}/${playbookname}.yml
         state: link
     when: "ansible_distribution == 'Ubuntu'"
 
+  - name: Download IntelliJ OpenSource
+    unarchive:
+        src:  "https://download.jetbrains.com/idea/ideaIC-2018.2.4.tar.gz"
+        dest: "{{ansible_env.HOME}}/bin"     
+        remote_src: yes
+    when: "ansible_distribution == 'Ubuntu'"
+
+  - name: link idea-IC
+    file:
+        src: "{{ansible_env.HOME}}/bin/idea-IC-182.4505.22/bin/idea.sh"
+        dest: "{{ansible_env.HOME}}/bin/idea.sh"
+        state: link
+
+  - name: Add ~/bin to Path
+    lineinfile:
+       path: "{{ansible_env.HOME}}/.bashrc"
+       line: "PATH=$PATH:{{ansible_env.HOME}}/bin"
 EOF
 
 #  Run ansible
@@ -235,10 +252,14 @@ if [ -e /vagrant/${playbookname}.retry ];then
 	sudo ansible-playbook -i "localhost," -c local /vagrant/${playbookname}.yml --limit @/vagrant/${playbookname}.retry
 else
 	if [ -e /vagrant/${playbookname}.yml ];then
-        ansible_install
-        sudo ansible-playbook -vvv -i "localhost," -c local /vagrant/${playbookname}.yml
+        if [ ! -e /usr/bin/ansible ];then 
+           ansible_install
+        fi   
+        sudo ansible-playbook -i "localhost," -c local /vagrant/${playbookname}.yml
     else
-    	ansible_install
-    	sudo ansible-playbook -vvv -i "localhost," -c local ${scriptdir}/${playbookname}.yml
+        if [ ! -e /usr/bin/ansible ];then 
+           ansible_install
+        fi  
+    	  sudo ansible-playbook -i "localhost," -c local ${scriptdir}/${playbookname}.yml
     fi
 fi
