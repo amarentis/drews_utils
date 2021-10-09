@@ -108,12 +108,14 @@ cat <<EOF >${scriptdir}/${playbookname}.yml
   - name: Install Vagrant plugins
     command: "vagrant plugin install {{item}}"
     with_items:
-         - vagrant-hostmanager
-         - vagrant-aws 
+        #  - vagrant-hostmanager
+        #  - vagrant-aws 
          - vagrant-flow
          - vagrant-hosts
          - vagrant-omnibus 
          - vagrant-reload
+         - winrm
+         - winrm-elevated
 
   - name: Add Java repository to sources
     apt_repository:
@@ -233,12 +235,6 @@ cat <<EOF >${scriptdir}/${playbookname}.yml
         dest: "{{ansible_env.HOME}}/bin"     
         remote_src: yes
     when: "ansible_distribution == 'Ubuntu'"
-
-  - name: link idea-IC
-    file:
-        src: "{{ansible_env.HOME}}/bin/idea-IC-182.4505.22/bin/idea.sh"
-        dest: "{{ansible_env.HOME}}/bin/idea.sh"
-        state: link
 
   - name: Add ~/bin to Path
     lineinfile:
