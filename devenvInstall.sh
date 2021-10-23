@@ -36,23 +36,24 @@ cat <<EOF >${scriptdir}/${playbookname}.yml
 ---
 # Ansible Config Script
 - hosts: all
+  become: true
   tasks:
   - name: Update APT package cache
     apt:
      update_cache: no
-    when: "ansible_distribution == 'Ubuntu'"
+    when: ansible_distribution == 'Ubuntu' or 'Pop!_OS'
 
   - name: Adding Docker key 
     apt_key: 
-      url: https://get.docker.com/gpg
+      url: https://download.docker.com/linux/ubuntu/gpg
       state: present
-    when: "ansible_distribution == 'Ubuntu'"  
+    when: ansible_distribution == 'Ubuntu' or 'Pop!_OS'
 
   - name: Adding Docker Repo
     apt_repository:
       repo: deb http://get.docker.io/ubuntu docker main
       state: absent
-    when: "ansible_distribution == 'Ubuntu'"  
+    when: ansible_distribution == 'Ubuntu' or 'Pop!_OS'  
 
   - name: Adding google chrome key
     apt_key:
@@ -67,12 +68,11 @@ cat <<EOF >${scriptdir}/${playbookname}.yml
     when: "ansible_distribution == 'Ubuntu'"  
 
   - name: Ubuntu16 Install software-properties-common lxd lxd-client lxc-docker git google-chrome-stable libcurl3 maven python-pip firefox etc. 
-    apt: name={{item}} state=present
+    package: name={{item}} state=present
     with_items:
          - software-properties-common
          - lxd
          - lxd-client
-         #- lxc-docker
          - git
          - libcurl3
          - maven
@@ -84,7 +84,7 @@ cat <<EOF >${scriptdir}/${playbookname}.yml
     when: (ansible_distribution == "Ubuntu" and ansible_distribution_version == "16.04") 
 
   - name: Ubuntu18 Install software-properties-common lxd lxd-client lxc-docker git google-chrome-stable libcurl3 maven python-pip firefox etc. 
-    apt: name={{item}} state=present
+    package: name={{item}} state=present
     with_items:
          - software-properties-common
          - lxd
@@ -102,8 +102,45 @@ cat <<EOF >${scriptdir}/${playbookname}.yml
   - name: Install vagrant
     apt:
       deb: https://releases.hashicorp.com/vagrant/2.1.4/vagrant_2.1.4_x86_64.deb
-      #state: installed
+      state: present
     when: "ansible_distribution == 'Ubuntu'"
+
+  - name: Adding Hashicorp key 
+    apt_key: 
+      url: https://apt.releases.hashicorp.com/gpg
+      state: present
+    when: ansible_distribution == 'Ubuntu' or 'Pop!_OS'
+
+  - name: Adding Hashicorp Repo
+    apt_repository:
+      repo: "deb [arch=amd64] https://apt.releases.hashicorp.com {{ ansible_lsb.codename }} main"
+      state: absent
+    when: ansible_distribution == 'Ubuntu' or 'Pop!_OS' 
+
+  - name: Update APT package cache
+    apt:
+     update_cache: yes
+    when: ansible_distribution == 'Ubuntu' or 'Pop!_OS'
+
+  - name: Pop_os Install software-properties-common lxd lxd-client lxc-docker git google-chrome-stable libcurl3 maven python-pip firefox etc. 
+    package: name={{item}} state=present
+    with_items:
+         - software-properties-common
+         - lxd
+         - lxd-client
+         - emacs-nox
+         - git
+         - maven
+         - firefox
+         - google-chrome-stable
+         - nmap
+         - apt-transport-https
+         - ca-certificates
+         - curl
+         - software-properties-common
+         - vagrant
+         - docker.io
+    when: ansible_distribution == 'Pop!_OS'
 
   - name: Install Vagrant plugins
     command: "vagrant plugin install {{item}}"
@@ -116,15 +153,16 @@ cat <<EOF >${scriptdir}/${playbookname}.yml
          - vagrant-reload
          - winrm
          - winrm-elevated
+    when: ansible_distribution == 'Ubuntu' or 'Pop!_OS'     
 
   - name: Add Java repository to sources
     apt_repository:
       repo: 'ppa:webupd8team/java'
-    when: "ansible_distribution == 'Ubuntu'"
+    when: ansible_distribution == 'Ubuntu'
 
   - name: Autoaccept license for Java
     shell: echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | /usr/bin/debconf-set-selections
-    when: "ansible_distribution == 'Ubuntu'"
+    when: ansible_distribution == 'Ubuntu'
 
   - name: Update APT package cache
     apt:
@@ -160,6 +198,10 @@ cat <<EOF >${scriptdir}/${playbookname}.yml
     when: "ansible_distribution == 'Ubuntu'"
 
   # Start Pip installs
+  - name: Install Pip
+    package:
+      name: python3-pip
+
   - name: upgrade pip
     pip:
        name: pip
@@ -236,10 +278,21 @@ cat <<EOF >${scriptdir}/${playbookname}.yml
         remote_src: yes
     when: "ansible_distribution == 'Ubuntu'"
 
+  - name: link idea-IC
+    file:
+        src: "{{ansible_env.HOME}}/bin/idea-IC-182.4505.22/bin/idea.sh"
+        dest: "{{ansible_env.HOME}}/bin/idea.sh"
+        state: link
+    when: "ansible_distribution == 'Ubuntu'"
+
   - name: Add ~/bin to Path
     lineinfile:
        path: "{{ansible_env.HOME}}/.bashrc"
-       line: "PATH=$PATH:{{ansible_env.HOME}}/bin"
+       line: "PATH=/home/amarentis/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:{{ansible_env.HOME}}/bin"
+
+  - name: debug
+    debug: var=ansible_lsb.codename
+
 EOF
 
 #  Run ansible
