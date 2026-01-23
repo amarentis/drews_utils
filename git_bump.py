@@ -34,7 +34,15 @@ def read_pyproject_version() -> Tuple[str, Path]:
     try:
         version = data["tool"]["poetry"]["version"]
     except (KeyError, TypeError):
-        raise KeyError("Could not find tool.poetry.version in pyproject.toml")
+        # raise KeyError("Could not find tool.poetry.version in pyproject.toml")
+        print("Could not find tool.poetry.version in pyproject.toml")
+        version = None
+    if version is None:
+       try:
+           version = data["project"]["version"]
+       except (KeyError, TypeError):
+          print("Could not find project.version in pyproject.toml")
+          raise KeyError("Could not find version in pyproject.toml")
 
     return version, pyproject_path
 
