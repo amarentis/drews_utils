@@ -70,6 +70,7 @@ def update_pyproject_version(new_version: str, path: Path):
     """Update version in pyproject.toml (simple string replacement)."""
     lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
     in_poetry_section = False
+    in_project_section = False
     updated = False
 
     for i, line in enumerate(lines):
@@ -80,6 +81,18 @@ def update_pyproject_version(new_version: str, path: Path):
         if in_poetry_section and stripped.startswith("["):
             in_poetry_section = False  # exited section
         if in_poetry_section and stripped.startswith("version ="):
+            # Replace version line (assumes it's quoted)
+            old_version_line = f'version = "{read_pyproject_version()[0]}"'
+            new_version_line = f'version = "{new_version}"'
+            lines[i] = line.replace(old_version_line, new_version_line)
+            updated = True
+            break
+        if stripped == "[project]":
+            in_project_section = True
+            continue
+        if in_project_section and stripped.startswith("["):
+           in_project_section = False
+        if in_project_section and stripped.startswith("version ="):
             # Replace version line (assumes it's quoted)
             old_version_line = f'version = "{read_pyproject_version()[0]}"'
             new_version_line = f'version = "{new_version}"'
