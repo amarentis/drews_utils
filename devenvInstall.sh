@@ -1,23 +1,5 @@
 #!/usr/bin/env bash
 
-#sudo apt-get update
-#sudo apt-get install pgp -y
-#sudo sh -c "curl -O https://get.docker.com/gpg | apt-key add -"
-#sudo sh -c "wget https://get.docker.com/gpg; cat gpg | apt-key add -"
-#sudo sh -c "echo deb http://get.docker.io/ubuntu docker main > /etc/apt/sources.list.d/docker.list"
-#sudo sh -C "sudo add-apt-repository ppa:ubuntu-lxc/lxd-stable -y"
-#sudo apt-get install software-properties-common lxc-docker python-pip awscli -y
-#sudo apt-add-repository ppa:ansible/ansible
-#sudo apt-get update
-#sudo apt-get install ansible vagrant
-#vagrant plugin install vagrant-hostmanager vagrant-aws vagrant-flow vagrant hosts vagrant-omnibus vagrant-reload
-#sudo pip install --upgrade pip
-#sudo pip install docker-py
-#sudo apt-get install awscli -y
-#sudo /usr/bin/aws ecr get-login --no-include-email >/tmp/ecslogin
-#sudo pip install awscli boto3 --upgrade --user
-
-
 #VARS
 scriptdir=$(pwd)
 playbookname=devopssetup
@@ -31,12 +13,21 @@ function ansible_install {
 	sudo apt-get install ansible -y
 }
 
+if [ -f ${scriptdir}/${playbookname}.yml ]; then 
+    rm ${scriptdir}/${playbookname}.yml
+fi
+
 # Generate Ansible ansible-playbook
 cat <<EOF >${scriptdir}/${playbookname}.yml
 ---
 # Ansible Config Script
 - hosts: all
   become: true
+  vars:
+      sasquatch_repo: "https://github.com/RobertLarsen/sasquatch.git"
+      sasquatch_dest: "/opt/sasquatch"          # Where to clone & build
+      sasquatch_bin: "/usr/local/bin/sasquatch" # Final install location
+      use_pr56_fix: true                        # Use modern-build branch (PR #56)  
   tasks:
   - name: Update APT package cache
     apt:
@@ -105,10 +96,31 @@ cat <<EOF >${scriptdir}/${playbookname}.yml
       state: present
     when: "ansible_distribution == 'Ubuntu'"
 
-  - name: Adding Hashicorp key 
-    apt_key: 
-      url: https://apt.releases.hashicorp.com/gpg
-      state: present
+  - name: Remove old HashiCorp keyring if exists
+    file:
+      path: /usr/share/keyrings/hashicorp-archive-keyring.gpg
+      state: absent
+    when: ansible_distribution == 'Ubuntu' or 'Pop!_OS'
+
+  - name: Add official HashiCorp GPG key
+    shell: |
+      wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+    args:
+      creates: /usr/share/keyrings/hashicorp-archive-keyring.gpg
+    when: ansible_distribution == 'Ubuntu' or 'Pop!_OS'
+
+  - name: Set correct permissions on HashiCorp keyring
+    file:
+      path: /usr/share/keyrings/hashicorp-archive-keyring.gpg
+      mode: '0644'
+    when: ansible_distribution == 'Ubuntu' or 'Pop!_OS'
+
+  - name: Add HashiCorp repository with signed-by
+    copy:
+      dest: /etc/apt/sources.list.d/hashicorp.list
+      content: |
+        deb [arch={{ ansible_architecture }} signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com {{ ansible_distribution_release }} main
+      mode: '0644'
     when: ansible_distribution == 'Ubuntu' or 'Pop!_OS'
 
   - name: Adding Hashicorp Repo
@@ -122,31 +134,53 @@ cat <<EOF >${scriptdir}/${playbookname}.yml
      update_cache: yes
     when: ansible_distribution == 'Ubuntu' or 'Pop!_OS'
 
-  - name: Pop_os Install software-properties-common lxd lxd-client lxc-docker git google-chrome-stable libcurl3 maven python-pip firefox etc. 
+  - name: Pop_os Install software-properties-common git google-chrome-stable libcurl3 maven python-pip firefox etc. 
     package: name={{item}} state=present
     with_items:
-         - software-properties-common
-         - lxd
-         - lxd-client
-         - emacs-nox
-         - git
-         - maven
-         - firefox
-         - google-chrome-stable
-         - nmap
-         - apt-transport-https
-         - ca-certificates
-         - curl
-         - software-properties-common
-         - vagrant
-         - docker.io
+        - software-properties-common
+        - emacs-nox
+        - git
+        - maven
+        - firefox
+        - google-chrome-stable
+        - nmap
+        - apt-transport-https
+        - ca-certificates
+        - curl
+        - software-properties-common
+        - vagrant
+        - docker.io
+        - usbutils
+        - wget
+        - build-essential
+        - zlib1g-dev
+        - liblzma-dev
+        - liblzo2-dev
+        - liblz4-dev             
+        - python3-dev
+        - python3-venv
+        - binwalk
+        - squashfs-tools
+        - p7zip-full
+        - flashrom
+        - bsdmainutils
+        - xxd
+        - file
+        - binutils
+        - lzop
+        - cpio
+        - mtools
+        - dosfstools
+        - parted
+        - locate
+        - screen
+        - minicom
+        - picocom
     when: ansible_distribution == 'Pop!_OS'
 
   - name: Install Vagrant plugins
     command: "vagrant plugin install {{item}}"
     with_items:
-        #  - vagrant-hostmanager
-        #  - vagrant-aws 
          - vagrant-flow
          - vagrant-hosts
          - vagrant-omnibus 
@@ -289,6 +323,53 @@ cat <<EOF >${scriptdir}/${playbookname}.yml
     lineinfile:
        path: "{{ansible_env.HOME}}/.bashrc"
        line: "PATH=/home/amarentis/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:{{ansible_env.HOME}}/bin"
+
+  - name: Ensure destination directory exists
+    ansible.builtin.file:
+      path: "{{ sasquatch_dest }}"
+      state: directory
+      mode: '0755'
+
+  - name: Clone Sasquatch repository (main branch first)
+    ansible.builtin.git:
+      repo: "{{ sasquatch_repo }}"
+      dest: "{{ sasquatch_dest }}"
+      single_branch: true
+      version: master
+      update: true
+    register: git_clone
+
+  - name: Checkout modern-build branch (PR #56) for Ubuntu 22.04+ compatibility
+    ansible.builtin.command: git checkout master
+    args:
+      chdir: "{{ sasquatch_dest }}"
+    when: git_clone.changed
+    changed_when: true
+    ignore_errors: true  # Fallback if fetch fails (rare)
+
+  - name: Run Sasquatch build script
+    ansible.builtin.command: ./build.sh
+    args:
+      chdir: "{{ sasquatch_dest }}"
+    when: git_clone.changed or not sasquatch_bin is file  # Only rebuild if needed
+    register: build_result
+    changed_when: "'Installing' in build_result.stdout or build_result.rc != 0"  # Rough idempotency
+
+  - name: Verify sasquatch binary exists
+    ansible.builtin.stat:
+      path: "{{ sasquatch_bin }}"
+    register: sasquatch_stat
+    failed_when: not sasquatch_stat.stat.exists
+
+  # - name: Show Sasquatch version (verification)
+  #   ansible.builtin.command: "{{ sasquatch_bin }} -v"
+  #   register: version_output
+  #   changed_when: false
+
+  # - name: Display Sasquatch installation result
+  #   ansible.builtin.debug:
+  #     msg: "{{ version_output.stdout | default('Sasquatch installed successfully') }}"
+
 
   - name: debug
     debug: var=ansible_lsb.codename
