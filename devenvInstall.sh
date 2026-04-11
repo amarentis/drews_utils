@@ -96,10 +96,31 @@ cat <<EOF >${scriptdir}/${playbookname}.yml
       state: present
     when: "ansible_distribution == 'Ubuntu'"
 
-  - name: Adding Hashicorp key 
-    apt_key: 
-      url: https://apt.releases.hashicorp.com/gpg
-      state: present
+  - name: Remove old HashiCorp keyring if exists
+    file:
+      path: /usr/share/keyrings/hashicorp-archive-keyring.gpg
+      state: absent
+    when: ansible_distribution == 'Ubuntu' or 'Pop!_OS'
+
+  - name: Add official HashiCorp GPG key
+    shell: |
+      wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+    args:
+      creates: /usr/share/keyrings/hashicorp-archive-keyring.gpg
+    when: ansible_distribution == 'Ubuntu' or 'Pop!_OS'
+
+  - name: Set correct permissions on HashiCorp keyring
+    file:
+      path: /usr/share/keyrings/hashicorp-archive-keyring.gpg
+      mode: '0644'
+    when: ansible_distribution == 'Ubuntu' or 'Pop!_OS'
+
+  - name: Add HashiCorp repository with signed-by
+    copy:
+      dest: /etc/apt/sources.list.d/hashicorp.list
+      content: |
+        deb [arch={{ ansible_architecture }} signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com {{ ansible_distribution_release }} main
+      mode: '0644'
     when: ansible_distribution == 'Ubuntu' or 'Pop!_OS'
 
   - name: Adding Hashicorp Repo
