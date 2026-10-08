@@ -10,3 +10,4 @@ bin/*
 .kitchen/
 .kitchen.local.yml
 devopssetup.yml
+.venv/
